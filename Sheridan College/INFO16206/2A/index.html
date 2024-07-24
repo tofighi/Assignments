@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Assignment N2</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+        <link rel='stylesheet' href='./css/moveme.css'>
+ 
+    </head>
+    <body>
+        <div id="container">
+            <div id="ball"></div>
+            <div id="racket"></div>
+            <div id="shape"></div>
+            <div id="message"></div>
+        </div>
+
+        <script>
+            window.addEventListener("load", function load(){
+                
+                 // Cancel load event - no longer needed!
+                window.removeEventListener("load",load);
+                
+                // Instead of DOM Extension (Exercise 9.1) 
+                // Let's do DOM wrapping: https://stackoverflow.com/questions/5318846/what-exactly-is-dom-extension-wrapping
+                
+                // DO NOT touch this constructor function! See requirement N16.
+                var DOMElement = function (element, x_speed=0, y_speed=0) {
+                    
+                    this.element = document.getElementById(element);
+                    
+                    // DO NOT use .clientWidth/.clientHeight because it's zero
+                    // for elements with display:none;
+                    // The code below is for references only!
+                    //this.x = this.element.offsetLeft;
+                    //this.y = this.element.offsetTop;
+                    //this.width = this.element.clientWidth;
+                    //this.height = this.element.clientHeight;
+
+                    // Instead, let's use style object:
+                    // https://developer.mozilla.org/en-US/docs/Web/API/Window/getComputedStyle
+                    
+                    // Let's cache it!
+                    this.computedStyle = window.getComputedStyle(this.element);
+
+                    this.x = parseInt(this.computedStyle.getPropertyValue('left'), 10);
+                    this.y = parseInt(this.computedStyle.getPropertyValue('top'), 10);
+
+                    this.width = parseInt(this.computedStyle.getPropertyValue('width'), 10);
+                    this.height = parseInt(this.computedStyle.getPropertyValue('height'), 10);
+                    
+                    this.x_speed = x_speed;
+                    this.y_speed = y_speed;
+                    
+                    this.hide = function () {
+                        this.element.style.display="none";
+                    };
+
+                    this.show = function (msg=null) {
+                        if (msg) {
+                            this.element.textContent = msg;
+                        }
+                        this.element.style.display="block";
+                    };
+                    
+                    this.place = function(x=null, y=null) {
+                        if (x) {this.x=x;}
+                        if (y) {this.y=y;}
+                        this.element.style.left = this.x + "px";
+                        this.element.style.top = this.y + "px";
+                     };
+                     
+                     
+                    this.setDimensions = function(height=null, width=null){
+                        if (width) {
+                            this.width=width;
+                            this.element.style.width = this.width + "px";
+                        }
+                        if (height) {
+                            this.height=height;
+                            this.element.style.height = this.height + "px";
+                        }
+                    };
+                     
+                     
+                     // Each node has a parentNode / parentElement node.
+                     // In our case "container" is the parent element for "Ball" and "Racket"
+                     // The "container" parent node has it's own width and height
+                     this.boundary={
+                                    width: this.element.parentElement.clientWidth, 
+                                    height: this.element.parentElement.clientHeight
+                                    };
+
+
+                     this.collision = function (obj) {
+                        if (this.x < obj.x + obj.width  && this.x + this.width > obj.x &&
+                            this.y < obj.y + obj.height && this.height + this.y > obj.y) {
+                             return true;
+                         }
+                         return false;
+                    };
+
+
+                    
+                };
+                
+                
+                
+                var Ball = function(element, x_speed, y_speed) {
+                    
+                    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/call
+                    // The call() allows for a function/method belonging to one object to be assigned and called for a different object.
+                     DOMElement.call(this, element, x_speed, y_speed);
+                    
+                    // You must change this method! 
+                    // To detect collisions you must pass obj1 (shape) and obj2 (racket) here!
+                     this.move = function(obj1=null) {
+                            this.x += this.x_speed;
+                            this.y += this.y_speed;
+
+                            if ( this.x<= 0 || this.x + this.width >= this.boundary.width ) {
+                               this.x_speed *=  (-1);
+                            }
+
+                            if (this.y<= 0 || this.y + this.height >= this.boundary.height ) {
+                                this.y_speed *=  (-1);
+                            }
+
+                            // Right now only collision with one object is detected
+                            // You also need to add collision with a "racket"!
+                            if ( (obj1) && this.collision(obj1)) {
+                                    gameOver("You win!"); 
+                            }
+
+                            this.place();
+                            
+                    }.bind(this);
+                    
+                    this.intervalID=null;
+     
+     
+                    // Notice: only one object is accepted now ("shape"). 
+                    // What about "racket" ?
+                    this.startMove = function(obj1) {
+                        if (!this.intervalID){
+                            this.intervalID=setInterval(this.move.bind(this), 20, obj1);
+                        }
+                    };
+                    
+                    // You should add .stopMove() method below!
+
+                };
+
+        
+                // This constructor function is incomlete! You must add 
+                var Racket = function(element, x_speed, y_speed) {
+                    
+                     DOMElement.call(this, element, x_speed, y_speed);
+                    
+                    // You should add .move() method below:
+                    // this.move = function(event) {..};  
+                    
+                };
+                
+
+                var message = new DOMElement("message");
+                var container = new DOMElement( "container" );
+                var shape = new DOMElement("shape");
+        
+                // You must change location of the shape below - see requirement N6.
+                shape.place(container.width/2+60, container.height/2);
+                
+                // Show the shape
+                shape.show();
+           
+                var racket = new Racket("racket");
+                racket.show();
+
+                // Must be last! Need "shape" object
+                var ball = new Ball( "ball" , 2, 5 );
+                
+                // display (if hidden)!
+                ball.show(); 
+                
+                /// Start to move the Ball:
+                // Notice: only one object is passed right now. 
+                // You must pass also "racket" object to detect collisions with it.
+                ball.startMove(shape);
+        
+
+             // This function is incomplete! Some modifications required!
+             // You might want to include the color as a parameter!
+             // Inside this function you must stop the balls, cancel events and timers, etc.
+             // Important: ball here is "hidden" but still active! Fix this
+               function gameOver(msg) {
+                    
+                    //ball.stopMove();
+                    ball.hide();
+                    
+                    //shape.hide();
+                    message.show(msg);
+               }
+
+               
+    });
+    </script>
+    </body>
+</html>
